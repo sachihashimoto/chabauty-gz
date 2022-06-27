@@ -36,7 +36,7 @@ function makepAdic(value, p, prec, f, s, k, D, K)
     return value, ef;
 end function;
 
-function ellval(E, D, p, B, file)
+function ellval(E, D, p, B, file: bigqprec:= 2000, complexprec:= 100)
 	//r = i * (p-1)^2 for now
 	//B if p = 5 then (p-1)^2 already divides 4(p-1)
 	//B is the prec so we work up to i = 1, ..., B
@@ -46,7 +46,7 @@ function ellval(E, D, p, B, file)
 	//this function really has no purpose other than to call the other function and rename/reindex it in terms of Rubin's paper
 	k:= 2; //fixme, just write 2 everywhere
 	f:= ModularForm(E);
-	algAns, K, KM, injK := runLeibniz(f, D, p, B, file: bigqprec:= 2000, complexprec:= 100);
+	algAns, K, KM, injK := runLeibniz(f, D, p, B, file: bigqprec:= bigqprec, complexprec:= complexprec);
 
 	pAdicAns:=[];
     for i in [1 .. B] do
@@ -94,14 +94,14 @@ function findRoot(h0,B,p,l0)
 	return "failure";
 end function;
 
-function computeLogConst(E,D,p,B, file)
+function computeLogConst(E,D,p,B, file: bigqprec:= 2000, complexprec:= 100)
 	//computes L*(0) which is, up to a constant, the log^2
 	//we will iterate on r = (p-1)* i , so 1- r = -j
 	// j = r - 1 = (p-1) i  - 1 
 	refvalue:= (p-1) div 2; //this can be (p-1)/2, or (p-1), or a multiple
 	assert B ge refvalue;
 	
-	lv := ellval(E, D, p, B, file);
+	lv := ellval(E, D, p, B, file: bigqprec:= bigqprec, complexprec:= complexprec);
 
 	small_lv:=[]; //cut them down to precision-ish, otherwise we get precision errors sometimes
 	for val in lv do

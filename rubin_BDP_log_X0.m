@@ -1,6 +1,5 @@
-
-
-
+// Sachi Hashimoto, 2022
+// Code for computing the special value of the anticyclotomic p-adic L-function of Bertolini, Darmon, Prasanna
 
 function df(f,r)
 //atkin serre derivative
@@ -44,61 +43,18 @@ function chowlaselbergrevised(d, F)
 	return CS;
 end function;
 
-function algebrize(value, K, N, wt)
-	F:= Parent(value);
-	epscomp := RealField(Precision(F)) ! (10^(-Precision(F) + 10));
-	emb:=hom<K->F|Conjugates(K.1)[1]>;
-	repart := Re(value);
-	impart := Im(value);
-	traceval := repart *2; 
-	normval := repart^2 + impart^2;
-	if IsPrime(N) then
-		B := N^Ceiling(wt*N/(N - 1));
-	else
-		//now z^2 - traceval*z + normval is the minpoly for something in O_K[1/N]
-		//figure out  the power of N
-		success := false;
-		for i in [0..2*N] do
-			B := N^i;
-			t := traceval*B;
-			n := normval*B^2;
+function algebraize(value, K, N, wt)
 
-			if Abs((Round(n) - n)/n) lt epscomp then
-				if traceval lt epscomp or Abs((Round(t) - t)/t) lt epscomp then
-					success := true;
-					break i;
-				end if;
-			end if;
-		end for;
-		if not success then
-			error "foo bar";
-		end if;
-	
-		print "not implemented error...";
+
+	bool, algval := AlgebraizeElementExtra(value, K);
+
+	if bool then
+		//TODO: re-implement check that thiss is an algebraic integer in K
+		return algval[1], algval[2] * K.1;
+	else 
+		print "error algebraizing... try increasing precision?";
 	end if;
-	// B*value belongs to O_K
-	traceval *:= B;
-	normval *:= B^2;
-	//now z^2 - traceval*z + normval is the minpoly
-	//also traceval, normval are integers
-	traceval := Round(traceval); //How do I do this better?
-	normval := Round(normval);
-	assert Abs(Round(normval) - normval) lt epscomp;
-	assert Abs(Round(normval) - normval) lt epscomp;
-	_<z>:= PolynomialRing(Integers());
-	minpoly := z^2 - traceval*z + normval;
-	rts := Roots(minpoly, K); //need to return the root wih the correct sign
-	// FIXME do like
-	for r in rts do
-		if (Sign(Re(emb(r[1]))) eq Sign(Re(value)) or Sign(Re(emb(r[1]))) eq 0) and (Sign(Im(emb(r[1]))) eq Sign(Im(value)) or  Sign(Im(emb(r[1]))) eq 0) then
-			if true then
-				print "sanity check algebrize";
-				print value;
-				print r[1][1]/B, r[1][2]*K.1/B;
-			end if;
-			return r[1][1]/B, r[1][2]*K.1/B;
-		end if;
-	end for;
+
 
 end function;
 
@@ -106,14 +62,19 @@ function constructPhi(wt2forms, E2z0real, E2z0im, E2starofCM, AlgField, qofjinv,
 //do some linear algebra to construct the modular form phi
 	fvalues := [];
 	for f in wt2forms do
-		fqexp := qExpansion(f,bigqprec);
+		coeffs := Eltseq(qExpansion(f,bigqprec));
+		den := LCM([Denominator(c) : c in coeffs]);
+		fqexp:=qExpansion(den*f,bigqprec);
 		feval := Evaluate(fqexp,qofjinv)/Omegasq;
-		f0, f1:= algebrize(feval, AlgField, N, 2);
-		Append(~fvalues,[f0, f1]);
+		f0, f1 := algebraize(feval, AlgField, N, 2);
+		print feval;
+		print "sanity check new algebraize";
+		print f0/den, f1/den;
+		Append(~fvalues,[f0/den, f1/den]);
 	end for;
 	//print(fvalues);
 	l := #wt2forms;
-	v:= Vector([AlgField!E2z0real, AlgField!E2z0im]);
+	v:= Vector([E2z0real, E2z0im]);
 	s:= Solution(Matrix(fvalues), v);
 	soln := 0;
 	qprec := MinimumPrecision(N, 4);
@@ -138,8 +99,6 @@ function solveSystem(modform, indexbasis, basis, M, qprec, RM)
 	assert Set(keys) eq Keys(basis);
 	//does linear algebra
 	//writes modform in terms of a basis
-	//basis does not have to be linearly independent, just has to span
-	//len := Min([#AbsEltseq(qExpansion(b, qprec)): b in basis]);
 	len := Min(qprec, #AbsEltseq(modform));
 
 	mat := [[AbsEltseq(qExpansion(basis[k], qprec))[j] : j in [1 ..len]]: i-> k in keys];
@@ -234,10 +193,6 @@ function solveFormalSystem(thetaphif, cfbasis, wt, R, genList, prec, M, RM);
 	//cfbasis is a formal set of vectors spanning the wt graded part of graded ring
 	evalmons := evalMonomials(cfbasis, genList);
 	_, sum := solveSystem(thetaphif, cfbasis, evalmons, M, prec, RM);
-	if false then
-		print "sum", sum;
-		print "end solveFormalSystem";
-	end if;
 	return sum;
 end function;
 
@@ -362,21 +317,21 @@ function leibnizThetaPhi(fmodform, n,  phi, genList, genWeights, R, GB, thetapol
 
 	algAns := [* *];
 	smallprec := MinimumPrecision(N,k+2);
-	falgebrized := qExpansion(fmodform,bigqprec);
+	falgebraized := qExpansion(fmodform,bigqprec);
 	if M eq Rationals() then
-		falgebrized :=  PowerSeriesRing(M, smallprec)!falgebrized;
+		falgebraized :=  PowerSeriesRing(M, smallprec)!falgebraized;
 	end if;
 	if n eq 0 then
 		fkbasis := makeMonomials(k, R, GB);
 		prec := MinimumPrecision(N, k); //need to find base value for induction
 		wtkbasis := evalMonomials(fkbasis, genList);
-		fpoly, _ := solveSystem(falgebrized, fkbasis, wtkbasis, M, prec, RM);
+		fpoly, _ := solveSystem(falgebraized, fkbasis, wtkbasis, M, prec, RM);
 		print wtkbasis;
 		print("Finished n = 0 case");
 		Write(file, "Finished n = 0");
 		return algAns, K, KM, fpoly, fkbasis, prec, 0;
 	elif n eq 1 then
-		thetaphif := theta(falgebrized, k, phi);
+		thetaphif := theta(falgebraized, k, phi);
 		prec := MinimumPrecision(N,k+2);
 		fkplus2basis := makeMonomials(k+2, R, GB);
 		wtkplus2basis := evalMonomials(fkplus2basis, genList);
@@ -458,7 +413,7 @@ end function;
 function setUp(f, D: bigqprec := 8000, complexprec:=100)
 	//sets up data for iteration
 
-	F<I>:=ComplexField(100);
+	F<I>:=ComplexFieldExtra(complexprec);
 	verbose:=true;
 	
 	PS<z> := PowerSeriesRing(F, bigqprec);
@@ -484,24 +439,20 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 
 	Omega := chowlaselbergrevised(-D, F);//This is the wrong normalized value of omega, need to fix because we want *I
 	Omegasq:= Omega * F!(1/-D) *Omega;
-	if false then
-		print("this is omega");
-		print(Omega);
-	end if;
-
 	qofjinv := Exp(F!(2*(Pi(F))*I*r2));
 	y := F!Im(r2);
 
 	_<z>:= PolynomialRing(Rationals());
-	K<a>:=NumberField(z^2-D);
+	K<a>:=NumberFieldExtra(z^2-D);
 	KM := CompositeFields(K, M)[1];
 
 	E2starofCM := Evaluate(E2, qofjinv)-3/(Pi(F)*(y));
 	E2z0 := E2starofCM*Omegasq^(-1);
 
 	print(E2z0);
-
-	E2z0real, E2z0im := algebrize(E2z0,K,N,2);
+	E2z0real, E2z0im := algebraize(E2z0,K,N,2);
+	print "sanity check new algebraize";
+	print E2z0real, E2z0im;
 
 	R, RIdeal, MGamma, quo, genList, genWeights := CanonicalRing(N : MaxWeight := 12);
 	RM := ChangeRing(R, M);
@@ -515,10 +466,6 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 		end if;
 	end for;
 
-	print("E2 values");
-	print(E2z0real);
-	print(E2z0im);
-	print(E2z0);
  	phi, phistarofz := constructPhi(wt2basis, E2z0real, E2z0im, E2starofCM, K, qofjinv, Omegasq, N, E2, bigqprec);
 	print("making theta polys");
 
@@ -540,11 +487,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 		w:= genWeights[i];
 		wprime := w div 2;
 		val := Evaluate(gexp, qofjinv)*Omegasq^(-wprime);
-		if false then
-			print("genvals");
-			print(val);
-		end if;
-		reval, imval := algebrize(val, K, N, w);
+		reval, imval := algebraize(val, K, N, w);
 		genvals[R.i]:= K!(reval+imval)/den;
 	end for;
 	return  phi, genList, genWeights, R, GB, thetapolys, genvals, K, KM, RM;
@@ -557,6 +500,7 @@ function runLeibniz(f, D, p, B, file : multiple := true, bigqprec:= 8000, comple
 	//then we define ell(r) = L(f, K, 1+ B(p-1), 1 -B(p-1))* Omega_p^( - 4(B(p-1))
 	//in the old BDP notation j = r-1
 	//returns a list of ell(i*(p-1)) for i = 1, 2, .., B as algebraic values
+
 
 	phi, genList, genWeights, R, GB, thetapolys, genvals, K, KM, RM:= setUp(f, D: bigqprec := bigqprec, complexprec:= complexprec);
 

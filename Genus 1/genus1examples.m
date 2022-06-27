@@ -57,7 +57,7 @@ load "rubin_BDP_log.m";
 
 //Varying N and fixed B
 
-// file := "path/to/file";
+file := "timings";
 
 // t := Cputime();
 // E:=EllipticCurve("37a1");  p:=5; D:= -11; B:= 5;
@@ -109,7 +109,7 @@ load "rubin_BDP_log.m";
 
 // t := Cputime();
 // E:= EllipticCurve("131a1");  p:=5; D:= -19; B:= 5; 
-// computeLogConst(E,D,p,B,file);
+// computeLogConst(E,D,p,B,file : bigqprec:= 3000);
 // print("time for 131a1");
 // print Cputime(t);
 
