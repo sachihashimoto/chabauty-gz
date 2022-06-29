@@ -229,7 +229,6 @@ def coleman_integrals_on_basis(H, P, Q, inverse_frob, forms, algorithm=None):
         b -= P_to_TP
     elif algorithm != 'teichmuller':
         b -= P_to_TP + TQ_to_Q
-    #M_sys = matrix(K, M_frob).transpose() - 1
     TP_to_TQ = inverse_frob * b
     if algorithm == 'teichmuller':
         return P_to_TP + TP_to_TQ + TQ_to_Q
@@ -463,14 +462,8 @@ def quadratic_chabauty_rank_1(E, p, C, T=None):
 
     #compute E2
     assert p > 3
-    #Mn = inverse_frob^(-n) #we lose p-adic prec here, maybe
-    #a01= Mn[0][1] #this code doesn't agree with sage's computation?
-    #a11 = Mn[1][1]
-    #E2 = -12*a01/a11  #this didn't agree?
     E2 = E.padic_E2(p,n+2)
-    #c = K(1/12*(EK.a1()^2+4*EK.a2()))- E2/12 #this is not correct?
-    c = -E2/12 #this currently gives the correct constant term
-    #print(c)
+    c = -E2/12 
 
     classes_to_consider = [Q for Q in list(Hp.points()) if ZZ(Q[1]) < p/2] #create list of residue disks
 
@@ -498,14 +491,13 @@ def quadratic_chabauty_rank_1(E, p, C, T=None):
         yR = SK(yR)
         dx = xR.derivative()
         const_term = coleman_integrals_on_basis(HK, HK(0,1,0), R, inverse_frob, forms)[0]
-        log_near_R = (dx/(2*yR)).integral() + const_term #maybe it's only the constant term
+        log_near_R = (dx/(2*yR)).integral() + const_term 
         log_near_R = log_near_R(p*t) #this seems to be off by one digit of precision sometimes?
         if Threetors and Q[1] != 0:
-            #print("threetors")
             intdoubleTtoR= HK.double_integrals_on_basis(T,R)[1] #doesn't work if R is weierstrass
             intinftoTw1=HK.coleman_integrals_on_basis(HK(0,1,0),T)[1]
             intTtoRw0 = HK.coleman_integrals_on_basis(T,R)[0]
-            localhtTor = 2*tauT + 2*intdoubleTtoR +2*intinftoTw1*intTtoRw0 #this is D_2(R) computed through T, why doesn't it need at 1/u squared?
+            localhtTor = 2*tauT + 2*intdoubleTtoR +2*intinftoTw1*intTtoRw0 
             #Note: w1 is not holomorphic so the first integral here is NOT zero
             #print(localhtTor)
             #print(2*HK.b_to_P_doub_AB(R))
@@ -531,7 +523,7 @@ def quadratic_chabauty_rank_1(E, p, C, T=None):
         #first two terms should give tau(R) also those are the only ones that contribute to the constant term
         #localhtTor should agree with 2*Hk.b_to_P_doub_AB(R)
         #then we have tau(R) + clog(R)^2
-        #the problem I had before is that when expanding the clog(R)^2 term we need to pull this back via psi to compute the correct log
+        #when expanding the clog(R)^2 term we need to pull this back via psi to compute the correct log
         #ie this is c*log(R)^2 *(1/u)^2
 
         lambda_p_near_R = SK(lambda_p_near_R)
@@ -555,35 +547,31 @@ def quadratic_chabauty_rank_1(E, p, C, T=None):
         goodroots = []
         roots = []
         for f in fW:
-            M= f.precision_absolute() #could change to relative?
-            fval = min(f[i].valuation(p) for i in range(M)) #now try the strategy from my paper, modified
+            M= f.precision_absolute() 
+            fval = min(f[i].valuation(p) for i in range(M)) 
             negative = True
             nprime = n
             #find true p-adic prec from t-adic prec
             while(negative):
-                if (M-3) -  fval - logb(M-3,p) > nprime: #why 3 and not 1? is this somehow because of the +2 earlier? #FIX THIS
+                if (M-3) -  fval - logb(M-3,p) > nprime: #FIX ME, this 3 is a bit mysterious
                     negative = False
                     break
                 nprime = nprime - 1
             fnew = 0
-            #print(nprime)
             for i in range(M):
                 fnew = fnew +t^i* f[i].add_bigoh(nprime)
             fnew = SK(fnew)
             f = fnew
-            #print(fnew)
             roots.append(my_roots_Zpt(f.truncate(M),nprime,p)) #roots are the union of the roots of fW
        
         for (i,f) in enumerate(fW): #check the Hensel condition for every root    
             derivs=[]
-            #print(roots[i])
             for R in roots[i]: #see if we can salvage a bad root by checking if R is a good root for at least one f in fW
                 Polys.<x> =PolynomialRing(Qp(p,n))
                 tR = f.parent().gens()[0]
                 tval = f.valuation()
-                if tval == 2: #allow double roots at zero? --  I think rho should be an even function when the constant is 0, but double check
+                if tval == 2: #allow double roots at zero
                     f= f/tR^(tval-1)
-                #print(tval) #it doesn't eval power series but it also doesn't like coercion to polys in Zpn, so this is maybe a hack
                 if Polys(f).derivative().subs(x = R[0])^2 ==0 and R not in goodroots:
                     badroots.append(R)
                 else:
