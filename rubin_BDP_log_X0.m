@@ -1,5 +1,9 @@
-// Sachi Hashimoto, 2022
 // Code for computing the special value of the anticyclotomic p-adic L-function of Bertolini, Darmon, Prasanna
+
+// Authors: 
+// Sachi Hashimoto, 2022
+// Edgar Costa, 2022 improvements to evalPoly and evalMonomials functions
+
 
 function df(f,r)
 //atkin serre derivative
@@ -247,44 +251,6 @@ function evalPoly(formalpoly, genList, gen_powers, prec, RM)
 end function;
 
 
-function evalPoly2(formalpoly, genList, evalmons, prec, RM)
-	//evaluates a polynomial in q-expansions
-	C, Mons := CoefficientsAndMonomials(formalpoly);
-	M := BaseRing(RM);
-	for b in evalmons do
-		sum := Parent(b)!0;
-		break b;
-	end for;
-	for i->mon in Mons do // Mons[i] == mon
-		b, v := IsDefined(evalmons, mon);
-		if b then
-			if BaseRing(Parent(v)) eq M then
-				sum +:= v * C[i];
-			else
-				modformM, phi :=  BaseExtend(Parent(v), M);
-				sum +:= phi(v) * C[i];
-			end if;
-		else
-			Exp := Exponents(mon);
-			CurrMonomial := 1;
-			for k := 1 to #genList do
-				if Exp[k] ne 0 then
-					CurrMonomial := CurrMonomial * genList[k]^Exp[k];
-				end if;
-			end for;
-			if BaseRing(Parent(CurrMonomial)) eq M then
-				sum +:= CurrMonomial * C[i];
-			else
-				modformM, phi :=  BaseExtend(Parent(CurrMonomial), M);
-				sum +:= phi(CurrMonomial) * C[i];
-			end if;
-		end if;
-	end for;
-	res := qExpansion(sum, prec);
-	return res;
-end function;
-
-
 function computeDerivatives(cfbasis, cpoly, thetapolys, RM, R)
 	thetacurrent := RM!0;
 	for j in [1 .. #cfbasis] do
@@ -388,7 +354,6 @@ function leibnizThetaPhi(fmodform, n,  phi, genList, genWeights, R, GB, thetapol
 			wtkplus2ibasis, gen_powers := evalMonomials(cfbasis, genList);
 			print("eval poly!!!");
 			time thetaeval := evalPoly(thetaphif, genList, gen_powers, prec, RM);
-			//time thetaeval := evalPoly2(thetaphif, genList, wtkplus2ibasis, prec, RM);
 			print("solve system");
 			time cpoly, _ := solveSystem(thetaeval, cfbasis, wtkplus2ibasis, M, prec, RM);
 			print("increased i");
