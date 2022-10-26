@@ -47,7 +47,9 @@ function chowlaselbergrevised(d, F)
 	return CS;
 end function;
 
-function algebraize(value, K, N, wt, epscomp)
+function algebraize(value, K, N, wt)
+	F:= Parent(value);
+	epscomp := RealField(Precision(F)) ! (10^(-Precision(F) + 10));
 	emb:=hom<K->F|Conjugates(K.1)[1]>;
 	repart := Re(value);
 	impart := Im(value);
@@ -117,7 +119,7 @@ function constructPhi(wt2forms, E2z0real, E2z0im, E2starofCM, AlgField, qofjinv,
 		den := LCM([Denominator(c) : c in coeffs]);
 		fqexp:=qExpansion(den*f,bigqprec);
 		feval := Evaluate(fqexp,qofjinv)/Omegasq;
-		f0, f1 := algebraize(feval, AlgField, N, 2, epscomp);
+		f0, f1 := algebraize(feval, AlgField, N, 2);
 		print feval;
 		print "sanity check new algebraize";
 		print f0/den, f1/den;
@@ -466,7 +468,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 	E2z0 := E2starofCM*Omegasq^(-1);
 
 	print(E2z0);
-	E2z0real, E2z0im := algebraize(E2z0,K,N,2, epscomp);
+	E2z0real, E2z0im := algebraize(E2z0,K,N,2);
 	print "sanity check new algebraize";
 	print E2z0real, E2z0im;
 
@@ -503,7 +505,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 		w:= genWeights[i];
 		wprime := w div 2;
 		val := Evaluate(gexp, qofjinv)*Omegasq^(-wprime);
-		reval, imval := algebraize(val, K, N, w, epscomp);
+		reval, imval := algebraize(val, K, N, w);
 		genvals[R.i]:= K!(reval+imval)/den;
 	end for;
 	return  phi, genList, genWeights, R, GB, thetapolys, genvals, K, KM, RM;
