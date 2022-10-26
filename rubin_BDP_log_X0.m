@@ -47,18 +47,65 @@ function chowlaselbergrevised(d, F)
 	return CS;
 end function;
 
-function algebraize(value, K, N, wt)
+function algebraize(value, K, N, wt, epscomp)
+	emb:=hom<K->F|Conjugates(K.1)[1]>;
+	repart := Re(value);
+	impart := Im(value);
+	traceval := repart *2; 
+	normval := repart^2 + impart^2;
+	if IsPrime(N) then
+		B := N^Ceiling(wt*N/(N - 1));
+	else
+		//now z^2 - traceval*z + normval is the minpoly for something in O_K[1/N]
+		//figure out  the power of N
+		success := false;
+		for i in [0..2*N] do
+			B := N^i;
+			t := traceval*B;
+			n := normval*B^2;
 
-
-	bool, algval := AlgebraizeElementExtra(value, K);
-
-	if bool then
-		//TODO: re-implement check that thiss is an algebraic integer in K
-		return algval[1], algval[2] * K.1;
-	else 
-		print "error algebraizing... try increasing precision?";
+			if Abs((Round(n) - n)/n) lt epscomp  or  normval lt epscomp then
+				if traceval lt epscomp or Abs((Round(t) - t)/t) lt epscomp then
+					success := true;
+					print i;
+					print success;
+					print traceval lt epscomp;
+					print traceval;
+					break i;
+				end if;
+			end if;
+		end for;
+		if not success then
+			error "foo bar";
+		end if;
+	
+		print "not implemented error...";
 	end if;
+	// B*value belongs to O_K
+	traceval *:= B;
+	normval *:= B^2;
 
+	//now z^2 - traceval*z + normval is the minpoly
+	//also traceval, normval are integers
+	traceval := Round(traceval); //How do I do this better?
+	normval := Round(normval);
+
+	assert Abs(Round(normval) - normval) lt epscomp;
+	assert Abs(Round(normval) - normval) lt epscomp;
+	_<z>:= PolynomialRing(Integers());
+	minpoly := z^2 - traceval*z + normval;
+	rts := Roots(minpoly, K); //need to return the root wih the correct sign
+	// FIXME do like
+	for r in rts do
+		if (Sign(Re(emb(r[1]))) eq Sign(Re(value)) or Sign(Re(emb(r[1]))) eq 0) and (Sign(Im(emb(r[1]))) eq Sign(Im(value)) or  Sign(Im(emb(r[1]))) eq 0) then
+			if true then
+				print "sanity check algebrize";
+				print value;
+				print r[1][1]/B, r[1][2]*K.1/B;
+			end if;
+			return r[1][1]/B, r[1][2]*K.1/B;
+		end if;
+	end for;
 
 end function;
 
@@ -70,7 +117,7 @@ function constructPhi(wt2forms, E2z0real, E2z0im, E2starofCM, AlgField, qofjinv,
 		den := LCM([Denominator(c) : c in coeffs]);
 		fqexp:=qExpansion(den*f,bigqprec);
 		feval := Evaluate(fqexp,qofjinv)/Omegasq;
-		f0, f1 := algebraize(feval, AlgField, N, 2);
+		f0, f1 := algebraize(feval, AlgField, N, 2, epscomp);
 		print feval;
 		print "sanity check new algebraize";
 		print f0/den, f1/den;
@@ -378,7 +425,11 @@ end function;
 function setUp(f, D: bigqprec := 8000, complexprec:=100)
 	//sets up data for iteration
 
+
+
 	F<I>:=ComplexFieldExtra(complexprec);
+	epscomp := RealField(Precision(F)) ! (10^(-Precision(F) + 10));
+
 	verbose:=true;
 	
 	PS<z> := PowerSeriesRing(F, bigqprec);
@@ -415,7 +466,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 	E2z0 := E2starofCM*Omegasq^(-1);
 
 	print(E2z0);
-	E2z0real, E2z0im := algebraize(E2z0,K,N,2);
+	E2z0real, E2z0im := algebraize(E2z0,K,N,2, epscomp);
 	print "sanity check new algebraize";
 	print E2z0real, E2z0im;
 
@@ -452,7 +503,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 		w:= genWeights[i];
 		wprime := w div 2;
 		val := Evaluate(gexp, qofjinv)*Omegasq^(-wprime);
-		reval, imval := algebraize(val, K, N, w);
+		reval, imval := algebraize(val, K, N, w, epscomp);
 		genvals[R.i]:= K!(reval+imval)/den;
 	end for;
 	return  phi, genList, genWeights, R, GB, thetapolys, genvals, K, KM, RM;
