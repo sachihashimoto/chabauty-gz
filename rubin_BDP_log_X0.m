@@ -49,6 +49,7 @@ end function;
 
 function algebraize(value, K, N, wt)
 	F:= Parent(value);
+	print F;
 	epscomp := RealField(Precision(F)) ! (10^(-Precision(F) + 10));
 	emb:=hom<K->F|Conjugates(K.1)[1]>;
 	repart := Re(value);
@@ -61,18 +62,14 @@ function algebraize(value, K, N, wt)
 		//now z^2 - traceval*z + normval is the minpoly for something in O_K[1/N]
 		//figure out  the power of N
 		success := false;
-		for i in [0..2*N] do
+		for i in [0 .. 2*N] do
 			B := N^i;
 			t := traceval*B;
 			n := normval*B^2;
 
-			if Abs((Round(n) - n)/n) lt epscomp  or  normval lt epscomp then
-				if traceval lt epscomp or Abs((Round(t) - t)/t) lt epscomp then
+			if Abs((Round(n) - n)/n) lt epscomp or normval lt epscomp then
+				if traceval lt epscomp or Abs((Round(t) - t)/t) lt epscomp then 
 					success := true;
-					print i;
-					print success;
-					print traceval lt epscomp;
-					print traceval;
 					break i;
 				end if;
 			end if;
@@ -80,23 +77,22 @@ function algebraize(value, K, N, wt)
 		if not success then
 			error "foo bar";
 		end if;
-	
-		print "not implemented error...";
 	end if;
 	// B*value belongs to O_K
 	traceval *:= B;
 	normval *:= B^2;
-
 	//now z^2 - traceval*z + normval is the minpoly
-	//also traceval, normval are integers
-	traceval := Round(traceval); //How do I do this better?
+	//also traceval, normval are algebraic integers
+	traceval := Round(traceval); 
 	normval := Round(normval);
-
 	assert Abs(Round(normval) - normval) lt epscomp;
 	assert Abs(Round(normval) - normval) lt epscomp;
 	_<z>:= PolynomialRing(Integers());
 	minpoly := z^2 - traceval*z + normval;
 	rts := Roots(minpoly, K); //need to return the root wih the correct sign
+	if #rts eq 0 then
+		error "Try increasing precision"; 	
+	end if;
 	// FIXME do like
 	for r in rts do
 		if (Sign(Re(emb(r[1]))) eq Sign(Re(value)) or Sign(Re(emb(r[1]))) eq 0) and (Sign(Im(emb(r[1]))) eq Sign(Im(value)) or  Sign(Im(emb(r[1]))) eq 0) then
@@ -117,15 +113,12 @@ function constructPhi(wt2forms, E2z0real, E2z0im, E2starofCM, AlgField, qofjinv,
 	for f in wt2forms do
 		coeffs := Eltseq(qExpansion(f,bigqprec));
 		den := LCM([Denominator(c) : c in coeffs]);
+
 		fqexp:=qExpansion(den*f,bigqprec);
 		feval := Evaluate(fqexp,qofjinv)/Omegasq;
 		f0, f1 := algebraize(feval, AlgField, N, 2);
-		print feval;
-		print "sanity check new algebraize";
-		print f0/den, f1/den;
 		Append(~fvalues,[f0/den, f1/den]);
 	end for;
-	//print(fvalues);
 	l := #wt2forms;
 	v:= Vector([E2z0real, E2z0im]);
 	s:= Solution(Matrix(fvalues), v);
@@ -141,7 +134,6 @@ function constructPhi(wt2forms, E2z0real, E2z0im, E2starofCM, AlgField, qofjinv,
 	print(phistarofz);
 	print("sanity check solution");
 	Evaluate(soln, qofjinv)/Omegasq;
-	print "phi=", phi;
 	return phi, phistarofz;
 end function;
 
@@ -406,6 +398,7 @@ function leibnizThetaPhi(fmodform, n,  phi, genList, genWeights, R, GB, thetapol
 			print("solve system");
 			time cpoly, _ := solveSystem(thetaeval, cfbasis, wtkplus2ibasis, M, prec, RM);
 			print("increased i");
+				
 			i := i+1;
 			print(i);
 			fact := Factorization(i);
@@ -461,7 +454,7 @@ function setUp(f, D: bigqprec := 8000, complexprec:=100)
 	y := F!Im(r2);
 
 	_<z>:= PolynomialRing(Rationals());
-	K<a>:=NumberFieldExtra(z^2-D);
+	K<a>:=NumberField(z^2-D);
 	KM := CompositeFields(K, M)[1];
 
 	E2starofCM := Evaluate(E2, qofjinv)-3/(Pi(F)*(y));

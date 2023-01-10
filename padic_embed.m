@@ -125,6 +125,5 @@ function mainLoop(f, B, D, p, algans, K, M, KM : emb:=1)
     for ell in Lp1 do
         Append(~res, ell *(globalEF)^(-2)); 
     end for;
-    print(ell)
     return Lp1, res;
 end function;
